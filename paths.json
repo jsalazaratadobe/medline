@@ -1,22 +1,22 @@
 {
   "mappings": [
-    "/content/medline/language-masters/en:/",
-    "/content/medline/language-masters/en/:/en/",
-    "/content/medline/language-masters/fr/:/fr/",
-    "/content/medline/language-masters/fr:/fr",
-    "/content/medline/language-masters/es/:/es/",
-    "/content/medline/language-masters/es:/es",
-    "/content/medline/language-masters/ja/:/ja/",
-    "/content/medline/language-masters/ja:/ja",
-    "/content/medline/language-masters/de/:/de/",
-    "/content/medline/language-masters/de:/de",
-    "/content/medline/configuration:/.helix/config.json",
-    "/content/medline/metadata:/metadata.json",
-    "/content/medline/redirects:/redirects.json",
-    "/content/medline/placeholders:/placeholders.json"
+    "/content/wknd-universal/language-masters/en:/",
+    "/content/wknd-universal/language-masters/en/:/en/",
+    "/content/wknd-universal/language-masters/fr/:/fr/",
+    "/content/wknd-universal/language-masters/fr:/fr",
+    "/content/wknd-universal/language-masters/es/:/es/",
+    "/content/wknd-universal/language-masters/es:/es",
+    "/content/wknd-universal/language-masters/ja/:/ja/",
+    "/content/wknd-universal/language-masters/ja:/ja",
+    "/content/wknd-universal/language-masters/de/:/de/",
+    "/content/wknd-universal/language-masters/de:/de",
+    "/content/wknd-universal/configuration:/.helix/config.json",
+    "/content/wknd-universal/metadata:/metadata.json",
+    "/content/wknd-universal/redirects:/redirects.json",
+    "/content/wknd-universal/placeholders:/placeholders.json"
   ],
   "includes": [
-    "/content/medline/",
-    "/content/dam/medline/"
+    "/content/wknd-universal/",
+    "/content/dam/wknd-universal/"
   ]
 }

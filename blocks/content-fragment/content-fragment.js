@@ -1,6 +1,6 @@
 import { getMetadata } from '../../scripts/aem.js';
 import { isAuthorEnvironment, moveInstrumentation } from '../../scripts/scripts.js';
-import { getHostname } from '../../scripts/utils.js';
+import { getHostname, mapAemPathToSitePath } from '../../scripts/utils.js';
 import { readBlockConfig } from '../../scripts/aem.js';
 
 /**
@@ -10,8 +10,7 @@ import { readBlockConfig } from '../../scripts/aem.js';
 export default async function decorate(block) {
 	// Configuration
   const CONFIG = {
-    WRAPPER_SERVICE_URL: 'https://prod-60.eastus2.logic.azure.com:443/workflows/94ef4cd1fc1243e08aeab8ae74bc7980/triggers/manual/paths/invoke',
-    WRAPPER_SERVICE_PARAMS: 'api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=e81iCCcESEf9NzzxLvbfMGPmredbADtTZSs8mspUTa4',
+    WRAPPER_SERVICE_URL: 'https://3635370-refdemoapigateway-stage.adobeioruntime.net/api/v1/web/ref-demo-api-gateway/fetch-cf',
     GRAPHQL_QUERY: '/graphql/execute.json/ref-demo-eds/CTAByPath',
     EXCLUDED_THEME_KEYS: new Set(['brandSite', 'brandLogo'])
   };
@@ -51,13 +50,13 @@ export default async function decorate(block) {
       headers: { 'Content-Type': 'application/json' }
     }
   : {
-      url: `${CONFIG.WRAPPER_SERVICE_URL}?${CONFIG.WRAPPER_SERVICE_PARAMS}`,
+      url: `${CONFIG.WRAPPER_SERVICE_URL}`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         graphQLPath: `${aempublishurl}${CONFIG.GRAPHQL_QUERY}`,
         cfPath: contentPath,
-        variation: variationname
+        variation: `${variationname};ts=${Date.now()}`
       })
     };
 
@@ -140,14 +139,51 @@ export default async function decorate(block) {
           bannerDetailStyle = 'background-image: linear-gradient(90deg,rgba(0,0,0,0.6), rgba(0,0,0,0.1) 80%) ,url('+imgUrl+');';
         }
 
-        block.innerHTML = `<div class='banner-content block ${displayStyle}' data-aue-resource=${itemId} data-aue-label="Offer Content fragment" data-aue-type="reference" data-aue-filter="contentfragment" style="${bannerContentStyle}">
+        // Derive CTA href: supports author-side paths/URLs and publish/EDS URLs
+        let ctaHref = '#';
+        const cta = cfReq?.ctaurl;
+        if (cta) {
+          if (typeof cta === 'string') {
+            // Absolute URL vs repository path
+            ctaHref = /^https?:\/\//i.test(cta) ? cta : `${isAuthor ? (aemauthorurl || '') : (aempublishurl || '')}${cta}`;
+          } else if (typeof cta === 'object') {
+            const authorUrl = cta._authorUrl;
+            const publishUrl = cta._publishUrl || cta._url;
+            const pathOnly = cta._path;
+            if (isAuthor) {
+              ctaHref = authorUrl || (pathOnly ? `${aemauthorurl || ''}${pathOnly}` : '#');
+            } else {
+              ctaHref = pathOnly;
+            }
+          }
+        }
+
+        // Map content paths to site-relative paths using paths.json on live
+        if (!isAuthor) {
+          try {
+            let candidate = ctaHref;
+            if (/^https?:\/\//i.test(candidate)) {
+              const u = new URL(candidate);
+              candidate = u.pathname;
+            }
+            if (candidate && candidate.startsWith('/content/')) {
+              const mapped = await mapAemPathToSitePath(candidate);
+              if (mapped) ctaHref = mapped;
+            }
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('Failed to map CTA via paths.json', e);
+          }
+        }
+
+      block.innerHTML = `<div class='banner-content block ${displayStyle}' data-aue-resource=${itemId} data-aue-label=${variationname ||"Elements"} data-aue-type="reference" data-aue-filter="contentfragment" style="${bannerContentStyle}">
           <div class='banner-detail ${alignment}' style="${bannerDetailStyle}" data-aue-prop="bannerimage" data-aue-label="Main Image" data-aue-type="media" >
-                <p data-aue-prop="title" data-aue-label="Title" data-aue-type="text" class='cftitle'>${cfReq?.title}</p>
-                <p data-aue-prop="subtitle" data-aue-label="SubTitle" data-aue-type="text" class='cfsubtitle'>${cfReq?.subtitle}</p>
+                <h2 data-aue-prop="title" data-aue-label="Title" data-aue-type="text" class='cftitle'>${cfReq?.title}</h2>
+                <h3 data-aue-prop="subtitle" data-aue-label="SubTitle" data-aue-type="text" class='cfsubtitle'>${cfReq?.subtitle}</h3>
                 
                 <div data-aue-prop="description" data-aue-label="Description" data-aue-type="richtext" class='cfdescription'><p>${cfReq?.description?.plaintext || ''}</p></div>
                  <p class="button-container ${ctaStyle}">
-                  <a href="${cfReq?.ctaUrl ? cfReq.ctaUrl : '#'}" data-aue-prop="ctaUrl" data-aue-label="Button Link/URL" data-aue-type="reference"  target="_blank" rel="noopener" data-aue-filter="page" class='button'>
+                  <a href="${ctaHref}" data-aue-prop="ctaurl" data-aue-label="Button Link/URL" data-aue-type="reference"  target="_blank" rel="noopener" data-aue-filter="page" class='button'>
                     <span data-aue-prop="ctalabel" data-aue-label="Button Label" data-aue-type="text">
                       ${cfReq?.ctalabel}
                     </span>
